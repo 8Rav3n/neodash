@@ -24,9 +24,6 @@ import {
   SET_STANDALONE_DASHBOARD_DATEBASE,
   SET_STANDALONE_ENABLED,
   SET_STANDALONE_MODE,
-  SET_LOGGING_MODE,
-  SET_LOGGING_DATABASE,
-  SET_LOG_ERROR_NOTIFICATION,
   SET_WAIT_FOR_SSO,
   SET_WELCOME_SCREEN_OPEN,
 } from './ApplicationActions';
@@ -53,8 +50,6 @@ const initialState = {
   dashboardToLoadAfterConnecting: null,
   waitForSSO: false,
   standalone: false,
-  loggingMode: '0',
-  logErrorNotification: '3',
 };
 export const applicationReducer = (state = initialState, action: { type: any; payload: any }) => {
   const { type, payload } = action;
@@ -110,21 +105,6 @@ export const applicationReducer = (state = initialState, action: { type: any; pa
     case SET_STANDALONE_MODE: {
       const { standalone } = payload;
       state = update(state, { standalone: standalone });
-      return state;
-    }
-    case SET_LOGGING_MODE: {
-      const { loggingMode } = payload;
-      state = update(state, { loggingMode: loggingMode });
-      return state;
-    }
-    case SET_LOGGING_DATABASE: {
-      const { loggingDatabase } = payload;
-      state = update(state, { loggingDatabase: loggingDatabase });
-      return state;
-    }
-    case SET_LOG_ERROR_NOTIFICATION: {
-      const { logErrorNotification } = payload;
-      state = update(state, { logErrorNotification: logErrorNotification });
       return state;
     }
     case SET_SSO_ENABLED: {

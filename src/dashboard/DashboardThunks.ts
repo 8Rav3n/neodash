@@ -5,8 +5,6 @@ import { runCypherQuery } from '../report/ReportQueryRunner';
 import { setParametersToLoadAfterConnecting, setWelcomeScreenOpen } from '../application/ApplicationActions';
 import { updateGlobalParametersThunk, updateParametersToNeo4jTypeThunk } from '../settings/SettingsThunks';
 import { createUUID } from '../utils/uuid';
-import { createLogThunk } from '../application/ApplicationThunks';
-import { applicationGetLoggingSettings, applicationGetConnectionUser, applicationIsStandalone } from '../application/ApplicationSelectors';
 
 export const removePageThunk = (number) => (dispatch: any, getState: any) => {
   try {
@@ -54,7 +52,7 @@ export const movePageThunk = (oldIndex: number, newIndex: number) => (dispatch: 
 };
 
 export const loadDashboardThunk = (text) => (dispatch: any, getState: any) => {
-   try {
+  try {
     if (text.length == 0) {
       throw 'No dashboard file specified. Did you select a file?';
     }
@@ -134,7 +132,7 @@ export const loadDashboardThunk = (text) => (dispatch: any, getState: any) => {
 
     // Reverse engineer the minimal set of fields from the selection loaded.
     dashboard.pages.forEach((p) => {
-     p.reports.forEach((r) => {
+      p.reports.forEach((r) => {
         if (r.selection) {
           r.fields = [];
           Object.keys(r.selection).forEach((f) => {
@@ -145,7 +143,6 @@ export const loadDashboardThunk = (text) => (dispatch: any, getState: any) => {
     });
 
     dispatch(setDashboard(dashboard));
-
     const { application } = getState();
 
     dispatch(updateGlobalParametersThunk(application.parametersToLoadAfterConnecting));
@@ -158,13 +155,8 @@ export const loadDashboardThunk = (text) => (dispatch: any, getState: any) => {
 
 export const saveDashboardToNeo4jThunk =
   (driver, database, dashboard, date, user, overwrite = false) =>
-  (dispatch: any, getState: any) => {
-      const loggingState = getState();
-      const loggingSettings = applicationGetLoggingSettings(loggingState)
-      const loguser = applicationGetConnectionUser(loggingState)
-      const neodashMode = applicationIsStandalone(loggingState) ? 'Standalone' : 'Editor'
-
-      try {
+  (dispatch: any) => {
+    try {
       const uuid = createUUID();
       const { title, version } = dashboard;
 
@@ -191,20 +183,6 @@ export const saveDashboardToNeo4jThunk =
         (records) => {
           if (records && records[0] && records[0]._fields && records[0]._fields[0] && records[0]._fields[0] == uuid) {
             dispatch(createNotificationThunk('🎉 Success!', 'Your current dashboard was saved to Neo4j.'));
-            if (loggingSettings.loggingMode > '1'){
-              dispatch(
-                  createLogThunk(
-                      driver, 
-                      loggingSettings.loggingDatabase,
-                      neodashMode,
-                      loguser,
-                      'INF - save dashboard', 
-                      database, 
-                      'Name:'+title,
-                      'User '+loguser+' saved dashboard to Neo4J in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33)
-                  )
-              );
-            }  
           } else {
             dispatch(
               createNotificationThunk(
@@ -212,50 +190,16 @@ export const saveDashboardToNeo4jThunk =
                 `Do you have write access to the '${database}' database?`
               )
             );
-            if (loggingSettings.loggingMode > '1'){
-              dispatch(
-                  createLogThunk(
-                      driver, 
-                      loggingSettings.loggingDatabase,
-                      neodashMode,
-                      loguser,
-                      'ERR - save dashboard', 
-                      database, 
-                      'Name:'+title,
-                      'Error while trying to save dashboard to Neo4J in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33)
-                  )
-              );
-            }
-  
           }
         }
       );
     } catch (e) {
       dispatch(createNotificationThunk('Unable to save dashboard to Neo4j', e));
-      if (loggingSettings.loggingMode > '1'){
-        dispatch(
-            createLogThunk(
-                driver, 
-                loggingSettings.loggingDatabase,
-                neodashMode,
-                loguser,
-                'ERR - save dashboard', 
-                database, 
-                'Name:Not fetched',
-                'Error while trying to save dashboard to Neo4J in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33)
-            )
-        );
-      }
-
     }
   };
 
-export const loadDashboardFromNeo4jByUUIDThunk = (driver, database, uuid, callback) => (dispatch: any, getState: any) => {
-const loggingState = getState();
-const loggingSettings = applicationGetLoggingSettings(loggingState)
-const loguser = applicationGetConnectionUser(loggingState)
-const neodashMode = applicationIsStandalone(loggingState) ? 'Standalone' : 'Editor'
-try {
+export const loadDashboardFromNeo4jByUUIDThunk = (driver, database, uuid, callback) => (dispatch: any) => {
+  try {
     const query = 'MATCH (n:_Neodash_Dashboard) WHERE n.uuid = $uuid RETURN n.content as dashboard';
     runCypherQuery(
       driver,
@@ -272,63 +216,17 @@ try {
               `A dashboard with UUID '${uuid}' could not be found.`
             )
           );
-          if (loggingSettings.loggingMode > '1'){
-            dispatch(
-                createLogThunk(
-                    driver, 
-                    loggingSettings.loggingDatabase,
-                    neodashMode,
-                    loguser,
-                    'ERR - load dashboard', 
-                    database, 
-                    'UUID:'+uuid,
-                    'Error while trying to load dashboard by UUID in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33)  
-                )
-            );
-          }
         }
-        if (loggingSettings.loggingMode > '1'){
-          dispatch(
-              createLogThunk(
-                  driver, 
-                  loggingSettings.loggingDatabase,
-                  neodashMode,
-                  loguser,
-                  'INF - load dashboard', 
-                  database, 
-                  'UUID:'+uuid,
-                  'User '+loguser+' Loaded dashboard by UUID in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33) 
-              )
-          );
-        }
-      callback(records[0]._fields[0]);
+        callback(records[0]._fields[0]);
       }
     );
   } catch (e) {
     dispatch(createNotificationThunk('Unable to load dashboard to Neo4j', e));
-    if (loggingSettings.loggingMode > '1'){
-      dispatch(
-          createLogThunk(
-              driver, 
-              loggingSettings.loggingDatabase,
-              neodashMode,
-              loguser,
-              'ERR - load dashboard', 
-              database, 
-              'UUID:'+uuid,
-              'Error while trying to load dashboard by UUID in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33)  
-          )
-      );
-    }
   }
 };
 
-export const loadDashboardFromNeo4jByNameThunk = (driver, database, name, callback) => (dispatch: any, getState: any) => {
-  const loggingState = getState();
-  const loggingSettings = applicationGetLoggingSettings(loggingState)
-  const loguser = applicationGetConnectionUser(loggingState)
-  const neodashMode = applicationIsStandalone(loggingState) ? 'Standalone' : 'Editor'
-    try {
+export const loadDashboardFromNeo4jByNameThunk = (driver, database, name, callback) => (dispatch: any) => {
+  try {
     const query =
       'MATCH (d:_Neodash_Dashboard) WHERE d.title = $name RETURN d.content as dashboard ORDER by d.date DESC LIMIT 1';
     runCypherQuery(
@@ -346,56 +244,14 @@ export const loadDashboardFromNeo4jByNameThunk = (driver, database, name, callba
               'A dashboard with the provided name could not be found.'
             )
           );
-          if (loggingSettings.loggingMode > '1'){
-            dispatch(
-                createLogThunk(
-                    driver, 
-                    loggingSettings.loggingDatabase,
-                    neodashMode,
-                    loguser,
-                    'ERR - load dashboard', 
-                    database, 
-                    'Name:'+name,
-                    'Error while trying to load dashboard by Name in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33)  
-                )
-            );
-          }
           return;
         }
 
         if (records[0].error) {
           dispatch(createNotificationThunk('Unable to load dashboard.', records[0].error));
-          if (loggingSettings.loggingMode > '1'){
-            dispatch(
-                createLogThunk(
-                    driver, 
-                    loggingSettings.loggingDatabase,
-                    neodashMode,
-                    loguser,
-                    'ERR - load dashboard', 
-                    database, 
-                    'Name:'+name,
-                    'Error while trying to load dashboard by Name in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33)  
-                )
-            );
-          }
           return;
         }
 
-        if (loggingSettings.loggingMode > '1'){
-          dispatch(
-              createLogThunk(
-                  driver, 
-                  loggingSettings.loggingDatabase,
-                  neodashMode,
-                  loguser,
-                  'INF - load dashboard', 
-                  database, 
-                  'Name:'+name,
-                  'User '+loguser+' Loaded dashboard by UUID in '+neodashMode+' mode at '+Date(Date.now()).substring(0,33) 
-              )
-          );
-        }
         callback(records[0]._fields[0]);
       }
     );
